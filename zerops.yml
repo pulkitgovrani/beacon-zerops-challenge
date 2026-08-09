@@ -1,0 +1,48 @@
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - cd app && npm ci && npm run build
+      deployFiles: ./app/~/
+      cache:
+        - app/node_modules
+    run:
+      base: nodejs@20
+      ports:
+        - port: 3000
+          httpSupport: true
+      start: npm start
+      healthCheck:
+        httpGet:
+          port: 3000
+          path: /api/health
+      envVariables:
+        DB_HOST: ${db_hostname}
+        DB_PORT: ${db_port}
+        DB_NAME: ${db_dbName}
+        DB_USER: ${db_user}
+        DB_PASSWORD: ${db_password}
+        CACHE_HOST: ${cache_hostname}
+        CACHE_PORT: "6379"
+
+  - setup: worker
+    build:
+      base: nodejs@20
+      buildCommands:
+        - cd worker && npm ci
+      deployFiles: ./worker/~/
+      cache:
+        - worker/node_modules
+    run:
+      base: nodejs@20
+      start: node check.js
+      envVariables:
+        DB_HOST: ${db_hostname}
+        DB_PORT: ${db_port}
+        DB_NAME: ${db_dbName}
+        DB_USER: ${db_user}
+        DB_PASSWORD: ${db_password}
+        CACHE_HOST: ${cache_hostname}
+        CACHE_PORT: "6379"
+        CHECK_INTERVAL_MS: "20000"
