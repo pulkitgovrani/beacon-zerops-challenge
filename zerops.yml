@@ -23,9 +23,7 @@ zerops:
         DB_NAME: ${db_dbName}
         DB_USER: ${db_user}
         DB_PASSWORD: ${db_password}
-        CACHE_HOST: ${cache_hostname}
-        CACHE_PORT: "6379"
-        CACHE_PASSWORD: ${cache_password}
+        CACHE_URL: ${cache_connectionString}
 
   - setup: worker
     build:
@@ -44,7 +42,5 @@ zerops:
         DB_NAME: ${db_dbName}
         DB_USER: ${db_user}
         DB_PASSWORD: ${db_password}
-        CACHE_HOST: ${cache_hostname}
-        CACHE_PORT: "6379"
-        CACHE_PASSWORD: ${cache_password}
+        CACHE_URL: ${cache_connectionString}
         CHECK_INTERVAL_MS: "20000"

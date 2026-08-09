@@ -4,14 +4,14 @@ let client;
 
 export function getCache() {
   if (!client) {
-    client = new Redis({
-      host: process.env.CACHE_HOST,
-      port: Number(process.env.CACHE_PORT || 6379),
-      username: process.env.CACHE_PASSWORD ? "default" : undefined,
-      password: process.env.CACHE_PASSWORD || undefined,
-      lazyConnect: false,
-      maxRetriesPerRequest: 2,
-    });
+    client = process.env.CACHE_URL
+      ? new Redis(process.env.CACHE_URL, { maxRetriesPerRequest: 2 })
+      : new Redis({
+          host: process.env.CACHE_HOST,
+          port: Number(process.env.CACHE_PORT || 6379),
+          password: process.env.CACHE_PASSWORD || undefined,
+          maxRetriesPerRequest: 2,
+        });
     client.on("error", (err) => {
       console.error("cache error", err.message);
     });
