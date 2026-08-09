@@ -7,6 +7,7 @@ export function getCache() {
     client = new Redis({
       host: process.env.CACHE_HOST,
       port: Number(process.env.CACHE_PORT || 6379),
+      username: process.env.CACHE_PASSWORD ? "default" : undefined,
       password: process.env.CACHE_PASSWORD || undefined,
       lazyConnect: false,
       maxRetriesPerRequest: 2,
