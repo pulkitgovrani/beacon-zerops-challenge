@@ -4,8 +4,16 @@ import { uploadIncidentReport } from "./lib/storage.js";
 
 const INTERVAL_MS = Number(process.env.CHECK_INTERVAL_MS || 20000);
 const TIMEOUT_MS = 5000;
+const CACHE_TIMEOUT_MS = 2000;
 const CACHE_TTL_SECONDS = 120;
 const WEBHOOK_URL = process.env.WEBHOOK_URL || "";
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ]);
+}
 
 async function checkHttp(target) {
   const controller = new AbortController();
@@ -25,7 +33,7 @@ async function checkHttp(target) {
 async function checkPostgres(db) {
   const start = Date.now();
   try {
-    await db.query("SELECT 1");
+    await withTimeout(db.query("SELECT 1"), TIMEOUT_MS, "postgres check");
     return { status: "up", latency_ms: Date.now() - start };
   } catch {
     return { status: "down", latency_ms: Date.now() - start };
@@ -35,7 +43,7 @@ async function checkPostgres(db) {
 async function checkValkey(cache) {
   const start = Date.now();
   try {
-    const pong = await cache.ping();
+    const pong = await withTimeout(cache.ping(), CACHE_TIMEOUT_MS, "valkey check");
     return { status: pong === "PONG" ? "up" : "down", latency_ms: Date.now() - start };
   } catch {
     return { status: "down", latency_ms: Date.now() - start };
@@ -89,14 +97,16 @@ async function runOnce(db, cache) {
         [monitor.id, result.status, result.latency_ms]
       );
 
-      await cache
-        .set(
+      await withTimeout(
+        cache.set(
           statusKey(monitor.id),
           JSON.stringify({ status: result.status, latency_ms: result.latency_ms, checked_at: new Date().toISOString() }),
           "EX",
           CACHE_TTL_SECONDS
-        )
-        .catch((e) => console.error("cache set failed:", e.message));
+        ),
+        CACHE_TIMEOUT_MS,
+        "cache set"
+      ).catch((e) => console.error("cache set failed:", e.message));
 
       if (prevStatus && prevStatus !== result.status) {
         if (result.status === "down") {
@@ -156,7 +166,7 @@ async function main() {
 
   const loop = async () => {
     try {
-      await runOnce(db, cache);
+      await withTimeout(runOnce(db, cache), INTERVAL_MS * 3, "run cycle");
     } catch (err) {
       console.error("run failed:", err);
     }
