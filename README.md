@@ -5,7 +5,7 @@ its own infrastructure — the app itself, its Postgres database, its Valkey cac
 a few public services, checking every ~20 seconds, recording history, and opening/closing
 incidents automatically when a service flips up or down.
 
-Live URL: _fill in after deploy_
+Live URL: https://app-2d6d-3000.prg1.zerops.app/
 Demo video: _fill in before submission_
 
 ## Why this project
@@ -17,7 +17,7 @@ it runs on.
 
 ## Architecture
 
-Four Zerops services, matching the "frontend / API / private network" model from the
+Five Zerops services, matching the "frontend / API / private network" model from the
 challenge brief:
 
 ```
@@ -53,6 +53,13 @@ challenge brief:
   migration step needed.
 - **`cache`** — Valkey. Holds the latest status per monitor with a TTL, so the dashboard
   always has an instant read even under load, while Postgres remains the durable log.
+- **`storage`** — Zerops Object Storage (S3-compatible, public-read). When an incident
+  resolves, the worker writes a JSON report (monitor, cause, every check recorded during
+  the incident window) to `incidents/{id}.json`, and the dashboard links to it directly
+  from the incident history.
+
+Click any monitor card on the dashboard for its detail page: full latency history and
+its own incident log with report links (`/service/[id]`, backed by `/api/monitors/[id]`).
 
 Internal networking: `app` and `worker` both talk to `db` and `cache` over the Zerops
 private network using the platform's own hostname/credential interpolation

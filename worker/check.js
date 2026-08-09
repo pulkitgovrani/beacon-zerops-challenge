@@ -1,5 +1,6 @@
 import { getPool, migrate } from "./lib/db.js";
 import { getCache, statusKey } from "./lib/cache.js";
+import { uploadIncidentReport } from "./lib/storage.js";
 
 const INTERVAL_MS = Number(process.env.CHECK_INTERVAL_MS || 20000);
 const TIMEOUT_MS = 5000;
@@ -104,11 +105,37 @@ async function runOnce(db, cache) {
             [monitor.id, "check failed"]
           );
         } else {
-          await db.query(
+          const { rows: resolved } = await db.query(
             `UPDATE incidents SET resolved_at = now()
-             WHERE monitor_id = $1 AND resolved_at IS NULL`,
+             WHERE monitor_id = $1 AND resolved_at IS NULL
+             RETURNING id, started_at, resolved_at, cause`,
             [monitor.id]
           );
+          for (const incident of resolved) {
+            try {
+              const { rows: incidentChecks } = await db.query(
+                `SELECT status, latency_ms, checked_at FROM checks
+                 WHERE monitor_id = $1 AND checked_at BETWEEN $2 AND $3
+                 ORDER BY checked_at ASC`,
+                [monitor.id, incident.started_at, incident.resolved_at]
+              );
+              const report = {
+                incident_id: incident.id,
+                monitor: { id: monitor.id, name: monitor.name, kind: monitor.kind, target: monitor.target },
+                started_at: incident.started_at,
+                resolved_at: incident.resolved_at,
+                cause: incident.cause,
+                checks_during_incident: incidentChecks,
+                generated_at: new Date().toISOString(),
+              };
+              const reportUrl = await uploadIncidentReport(incident.id, report);
+              if (reportUrl) {
+                await db.query("UPDATE incidents SET report_url = $1 WHERE id = $2", [reportUrl, incident.id]);
+              }
+            } catch (err) {
+              console.error(`failed to build/upload report for incident ${incident.id}:`, err.message);
+            }
+          }
         }
         await notify(monitor.name, prevStatus, result.status);
       }

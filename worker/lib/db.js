@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS incidents (
   cause TEXT
 );
 
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS report_url TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_incidents_monitor ON incidents(monitor_id);
 `;
 

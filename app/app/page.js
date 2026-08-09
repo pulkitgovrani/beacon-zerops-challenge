@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 const STATUS_COLOR = {
   up: "#22c55e",
@@ -129,9 +130,10 @@ export default function Dashboard() {
 
       <div className="grid gap-3">
         {(data?.monitors || []).map((m) => (
-          <div
+          <Link
+            href={`/service/${m.id}`}
             key={m.id}
-            className="flex items-center gap-4 rounded-lg border border-[#1c2622] bg-[#0b0f0d] px-4 py-3"
+            className="flex items-center gap-4 rounded-lg border border-[#1c2622] bg-[#0b0f0d] px-4 py-3 hover:border-[#2a3630] transition-colors"
           >
             <StatusDot status={m.status} />
             <div className="flex-1 min-w-0">
@@ -150,7 +152,7 @@ export default function Dashboard() {
             <div className="text-right w-16 text-xs text-[#8aa298]">
               {m.uptime_24h != null ? `${m.uptime_24h.toFixed(1)}%` : "—"}
             </div>
-          </div>
+          </Link>
         ))}
         {!data && (
           <div className="text-sm text-[#5f7168] py-8 text-center">Connecting…</div>
@@ -172,6 +174,19 @@ export default function Dashboard() {
                   — {inc.resolved_at ? "resolved" : "ongoing"}, lasted{" "}
                   {duration(inc.started_at, inc.resolved_at)}
                 </span>
+                {inc.report_url ? (
+                  <>
+                    {" "}
+                    <a
+                      href={inc.report_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#4ade80] underline hover:text-[#7fd8a8]"
+                    >
+                      report
+                    </a>
+                  </>
+                ) : null}
               </li>
             ))}
           </ul>
