@@ -48,3 +48,4 @@ zerops:
         STORAGE_SECRET_ACCESS_KEY: ${storage_secretAccessKey}
         STORAGE_BUCKET: ${storage_bucketName}
         STORAGE_ENDPOINT: ${storage_apiUrl}
+        WEBHOOK_URL: ${WEBHOOK_URL}
