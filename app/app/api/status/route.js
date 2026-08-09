@@ -3,6 +3,15 @@ import { getCache, statusKey } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
+const CACHE_TIMEOUT_MS = 1500;
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
 let migrated = false;
 
 export async function GET() {
@@ -21,7 +30,7 @@ export async function GET() {
   const results = await Promise.all(
     monitors.map(async (m) => {
       const [cached, historyRes, incidentRes] = await Promise.all([
-        cache.get(statusKey(m.id)).catch(() => null),
+        withTimeout(cache.get(statusKey(m.id)).catch(() => null), CACHE_TIMEOUT_MS),
         db.query(
           "SELECT status, latency_ms, checked_at FROM checks WHERE monitor_id = $1 ORDER BY checked_at DESC LIMIT 20",
           [m.id]
